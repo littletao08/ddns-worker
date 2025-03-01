@@ -1,4 +1,4 @@
-name = "ddns-worker"
+name = "ddns"
 main = "src/index.js"
 compatibility_date = "2023-01-01"
 
