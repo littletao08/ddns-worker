@@ -1,0 +1,11 @@
+name = "ddns-worker"
+main = "src/index.js"
+compatibility_date = "2023-01-01"
+
+[vars]
+# 您可以在这里添加环境变量
+
+# 可选：如果需要自定义域名，可以取消注释下面的部分
+# [routes]
+# pattern = "example.com/*"
+# zone_name = "example.com" 

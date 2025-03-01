@@ -128,3 +128,10 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Wrangler 相关
+.wrangler/
+.dev.vars
+
+# Node.js 相关
+node_modules/

@@ -1,8 +1,10 @@
-addEventListener('fetch', event => {
-    event.respondWith(handleRequest(event.request));
-  });
-  
-  async function handleRequest(request) {
+/**
+ * DDNS Worker
+ * 一个简单的 Cloudflare Worker，用于返回访问者的 IP 地址
+ */
+
+export default {
+  async fetch(request, env, ctx) {
     // 获取客户端IP地址
     const clientIP = request.headers.get('CF-Connecting-IP');
     
@@ -18,3 +20,4 @@ addEventListener('fetch', event => {
       }
     });
   }
+}; 
