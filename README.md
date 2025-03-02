@@ -1,14 +1,88 @@
 # DDNS Worker
 
-一个简单的 Cloudflare Worker，用于返回访问者的 IP 地址，并支持自动更新 DNS 记录。
+一个简单的 Cloudflare Worker，用于返回访问者的IP地址，并支持自动更新DNS记录。
 
 ## 功能
 
-- 直接返回访问者的 IP 地址
-- 支持 IPv4 地址验证和更新(对A类的域名)
+- 直接返回访问者的IP地址
+- 支持IPv4地址验证和更新(对A类的域名)
 - 支持多域名配置
-- 通过 API 自动更新 Cloudflare DNS 记录
+- 通过API自动更新Cloudflare DNS记录
 - 使用访问密钥保护更新操作
+
+## 工作流程
+
+```mermaid
+flowchart TD
+    A["客户端请求"] --> B["获取访问者IP地址"]
+    B --> C["直接返回IP<br/>访问: your-worker.workers.dev"]
+    B --> D["更新DNS记录<br/>访问: your-worker.workers.dev/update?name=sub.example.com&key=your_key"]
+    D --> F["获取请求参数<br/>域名name和访问密钥key"]
+    F --> G["以域名为前缀苑workder环境变量"]
+    G --> H["验证访问密钥是否匹配"]
+    H --> I["查询当前DNS记录信息"]
+    I --> J["比较当前记录IP与访问者IP"]
+    J --> K["IP地址相同<br/>无需更新"]
+    J --> L["IP地址不同<br/>需要更新"]
+    L --> M["调用Cloudflare API<br/>更新DNS记录"]
+    K --> N["返回无变更结果"]
+    M --> O["返回更新成功结果"]
+```
+
+## 前置条件
+
+在使用此 Worker 之前，您需要了解和完成以下设置：
+
+### Cloudflare Workers 简介
+
+Cloudflare Workers 是一个无服务器计算平台，允许您在 Cloudflare 的边缘网络上部署和运行代码，无需管理服务器。
+
+- [Cloudflare Workers 官方文档](https://developers.cloudflare.com/workers/)
+- [Workers 快速入门指南](https://developers.cloudflare.com/workers/get-started/guide/)
+
+### 必要的 Cloudflare 设置
+
+1. **创建 Cloudflare 账户**
+   - 访问 [Cloudflare 官网](https://www.cloudflare.com/) 注册账户
+   - 参考：[Cloudflare 注册指南](https://developers.cloudflare.com/fundamentals/account-and-billing/account-setup/create-account/)
+
+2. **添加域名到 Cloudflare**
+   - 将您的域名添加到 Cloudflare 进行管理
+   - 参考：[添加站点到 Cloudflare](https://developers.cloudflare.com/fundamentals/get-started/setup/add-site/)
+
+3. **创建 API 令牌**
+   - 访问 Cloudflare Dashboard > 个人资料 > API 令牌
+   - 创建具有 DNS 编辑权限的令牌
+   - 参考：[创建 API 令牌](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/)
+
+4. **获取 Zone ID**
+   - 在 Cloudflare Dashboard 中，选择您的域名
+   - 在右侧边栏的"API"部分可以找到 Zone ID
+   - 参考：[查找 Zone ID](https://developers.cloudflare.com/fundamentals/get-started/basic-tasks/find-account-and-zone-ids/)
+
+5. **设置 DNS 记录**
+   - 确保您要更新的 DNS 记录已经存在（A 类型记录）
+   - 参考：[管理 DNS 记录](https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/)
+
+### 域名路由配置
+
+您可以将 Worker 绑定到自定义域名，而不是使用默认的 workers.dev 域名：
+
+1. **配置自定义域名路由**
+   - 在 Cloudflare Dashboard 中，进入 Workers & Pages > 您的Worker > 触发器 > 自定义域
+   - 或在 wrangler.toml 中配置路由（见下文）
+   - 参考：[自定义域名配置](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/)
+
+2. **wrangler.toml 路由配置示例**
+   ```toml
+   [routes]
+   pattern = "ddns.example.com/*"
+   zone_name = "example.com"
+   ```
+
+3. **路由模式说明**
+   - 您可以使用通配符和路径匹配
+   - 参考：[路由模式语法](https://developers.cloudflare.com/workers/configuration/routing/routes/)
 
 ## 使用方法
 
@@ -42,6 +116,7 @@ home.example.com__access_key
 **在 Cloudflare Dashboard 中配置**：
 - 进入 Workers & Pages > your-worker-name > Settings > Variables
 - 添加相应的变量或加密变量
+- **重要**：所有变量都应设置为加密变量（Secret），以确保在自动部署过程中不会丢失
 
 ## 部署方法
 
