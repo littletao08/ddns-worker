@@ -2,6 +2,10 @@
  * DDNS Worker
  * 一个简单的 Cloudflare Worker，用于返回访问者的 IP 地址
  * 并支持自动更新DNS记录
+ * 使用方式:
+ * - 查询IP: https://ddns.example.com/
+ * - 更新DNS: https://ddns.example.com/update?name=your_dns_record_name&key=your_access_key 
+ * - name: 需要更新的DNS记录名称，全域名，不带https和最后/，如aaa.example.com
  */
 
 // 验证是否为有效的IPv4地址
@@ -31,19 +35,20 @@ function getConfigByName(name, env) {
 // 获取DNS记录当前IP
 async function getDnsRecordCurrentIp(zoneId, recordName, apiToken) {
   if (!apiToken) {
-    throw new Error(`缺少API令牌，请确保${recordName}__api_token环境变量已设置`);
+    throw new Error(`未找到${recordName}对应的API令牌，确保name正确或${recordName}__api_token变量在worker中已设置`);
   }
   
   if (!zoneId) {
-    throw new Error(`缺少Zone ID，请确保${recordName}__zone_id环境变量已设置`);
+    throw new Error(`未找到${recordName}对应的Zone_ID，确保name正确或${recordName}__zone_id变量在worker中已设置`); 
   }
   
   if (!recordName) {
-    throw new Error("缺少记录名称，请提供name参数");
+    throw new Error("需提供name参数");
   }
   
   try {
     // 列出DNS记录以获取当前IP
+    // 使用正确的API端点，通过type和name参数过滤记录
     const response = await fetch(
       `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records?type=A&name=${recordName}`,
       {
@@ -88,7 +93,12 @@ async function updateDnsRecord(recordId, newIp, zoneId, recordName, apiToken) {
     throw new Error("缺少记录名称，请提供name参数");
   }
   
+  if (!recordId) {
+    throw new Error("缺少记录ID，无法更新DNS记录");
+  }
+  
   try {
+    // 使用正确的API端点更新DNS记录
     const response = await fetch(
       `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records/${recordId}`,
       {

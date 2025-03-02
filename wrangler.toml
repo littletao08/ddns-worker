@@ -33,3 +33,4 @@ compatibility_date = "2023-01-01"
 # 使用方式:
 # - 查询IP: https://ddns.example.com/
 # - 更新DNS: https://ddns.example.com/update?name=your_dns_record_name&key=your_access_key 
+# - name: 需要更新的DNS记录名称，全域名，不带https和最后/，如aaa.example.com
