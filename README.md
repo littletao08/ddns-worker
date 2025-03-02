@@ -24,7 +24,7 @@
 Worker 使用环境变量进行配置，支持多域名。每个域名需要配置以下三个环境变量：
 
 ```
-{your_dns_record_name}__zone_id - 域名所在的 Cloudflare 区域 ID
+{your_dns_record_name}__zone_id - 域名所在的 Cloudflare 区域 ID（应设置为加密变量，否则部署时会覆盖）
 {your_dns_record_name}__api_token - 用于 Cloudflare API 认证的令牌（应设置为加密变量）
 {your_dns_record_name}__access_key - 用于客户端访问验证的密钥（应设置为加密变量）
 ```
