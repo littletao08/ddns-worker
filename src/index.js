@@ -112,7 +112,7 @@ async function updateDnsRecord(recordId, newIp, zoneId, recordName, apiToken) {
           name: recordName,
           content: newIp,
           ttl: 300,
-          proxied: true
+          proxied: false
         })
       }
     );
