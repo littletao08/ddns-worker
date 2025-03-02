@@ -8,7 +8,7 @@ compatibility_date = "2023-01-01"
 # 不要在此文件中设置实际值，特别是敏感信息
 
 # 多域名配置示例（每个域名使用以下格式的环境变量）：
-# {your_dns_record_name}__zone_id - 域名所在的Cloudflare区域ID
+# {your_dns_record_name}__zone_id - 域名所在的Cloudflare区域ID（应设置为加密变量，否则部署时会覆盖）
 # {your_dns_record_name}__api_token - 用于API认证的令牌（应设置为加密变量）
 # {your_dns_record_name}__access_key - 用于客户端访问验证的密钥（应设置为加密变量）
 
