@@ -29,11 +29,71 @@ flowchart TD
     M --> O["返回更新成功结果"]
 ```
 
-## 前置条件
+## 部署方法
+### worker的代码部署
+1. 将本[ddns-worker](https://github.com/zhyhang/ddns-worker)工程fork到自己的github账户下（**也可以通过将index.js直接上传到worker的代码编辑框，就不用执行以下步骤了**）
+1. 在 Cloudflare Dashboard 中创建一个新的 Worker 项目
+2. 进入 Workers & Pages > 创建应用程序 > 连接到 Git（或在settings界面中设置build）
+3. 连接到您的 GitHub 账户并选择包含 DDNS Worker 代码的仓库
+4. 配置构建设置：
+   - **Build command**: 留空（None）
+   - **Deploy command**: `npx wrangler deploy`
+   - **Root directory**: `/`
+5. 设置生产分支（默认为 `main`）
+6. 配置必要的环境变量（见下文的worker中配置环境变量）
+7. 点击"保存并部署"
 
-在使用此 Worker 之前，您需要了解和完成以下设置：
+完成上述步骤后，**每当您推送代码到指定的分支**，Cloudflare 将自动构建和部署您的 Worker。
+### woker中配置环境变量
 
-### Cloudflare Workers 简介
+**在 Cloudflare Dashboard 中配置**：
+- 进入 Workers & Pages > your-worker-name > Settings > Variables
+- 添加相应的变量或加密变量
+- **重要**：所有变量都应设置为加密变量（Secret），以确保在自动部署过程中不会丢失
+
+本程序可支持多域名，每个域名需要配置以下三个环境变量：
+```bash
+{your_dns_record_name}__zone_id - 域名所在的 Cloudflare 区域 ID（应设置为加密变量，否则部署时会覆盖）
+{your_dns_record_name}__api_token - 用于 Cloudflare API 认证的令牌（应设置为加密变量）
+{your_dns_record_name}__access_key - 用于客户端访问验证的密钥（应设置为加密变量）
+```
+例如，要为 `my.example.com` 配置 DDNS 更新：
+```bash
+my.example.com__zone_id
+my.example.com__api_token
+my.example.com__access_key
+```
+## 使用方法
+### 手工调用：
+
+- **查询当前 IP**：直接访问 `https://your-worker-domain.workers.dev/`(修改route后可以为https://worker.example.com)
+- **更新 DNS 记录**：访问 `https://your-worker-domain.workers.dev/update?name=your_dns_record_name&key=your_access_key`
+  - `name`：需要更新的 DNS 记录名称，使用完整域名（如 `my.example.com`）
+  - `key`：访问密钥，用于验证更新请求，要等于worker中的my.example.com__access_key值
+### 使用 crontab 自动更新
+您可以在Linux主机（**希望将其所在网络的公网出口IP作为dns解析ip**）上使用 crontab 设置定时任务，自动更新您的 DNS 记录：
+
+1. **编辑 crontab**：
+   ```bash
+   crontab -e
+   ```
+2. **添加定时任务**：
+
+   **每分钟更新一次**：
+   ```bash
+   * * * * * /usr/bin/curl -4 -s "https://worker.example.com/update?name=your.example.com&key=your_access_key" > /dev/null 2>&1
+   ```
+
+   **每小时更新一次**（推荐）：
+   ```bash
+   0 * * * * /usr/bin/curl -4 -s "https://worker.example.com/update?name=your.example.com&key=your_access_key" > /dev/null 2>&1
+   ```
+   > **注意**：
+   > - 使用完整路径 `/usr/bin/curl` 避免环境变量问题（可通过 `which curl` 命令查找您系统上的curl路径）
+   > - 使用 `-4` 参数强制使用 IPv4 连接
+   > - `-s` 参数使 curl 静默运行，不输出进度或错误信息
+   > - `> /dev/null 2>&1` 将所有输出重定向到空设备，防止 cron 发送邮件
+## Cloudflare Workers 简介
 
 Cloudflare Workers 是一个无服务器计算平台，允许您在 Cloudflare 的边缘网络上部署和运行代码，无需管理服务器。
 
@@ -64,140 +124,17 @@ Cloudflare Workers 是一个无服务器计算平台，允许您在 Cloudflare �
    - 确保您要更新的 DNS 记录已经存在（A 类型记录）
    - 参考：[管理 DNS 记录](https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/)
 
-### 域名路由配置
+### 修改worker域名（可选）
 
-您可以将 Worker 绑定到自定义域名，而不是使用默认的 workers.dev 域名：
+您可以将 Worker 绑定到自定义域名（**这个域名是worker的地址，不是你想动态绑定的域名**），而不是使用默认的 workers.dev 域名：
 
 1. **配置自定义域名路由**
-   - 在 Cloudflare Dashboard 中，进入 Workers & Pages > 您的Worker > 触发器 > 自定义域
-   - 或在 wrangler.toml 中配置路由（见下文）
-   - 参考：[自定义域名配置](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/)
+   - 在 Cloudflare Dashboard 中，进入 Workers & Pages >  your-worker-name > Settings > Domains & Routes 中配置route
 
-2. **wrangler.toml 路由配置示例**
-   ```toml
-   [routes]
-   pattern = "ddns.example.com/*"
-   zone_name = "example.com"
-   ```
-
-3. **路由模式说明**
+2. **路由模式说明**
    - 您可以使用通配符和路径匹配
    - 参考：[路由模式语法](https://developers.cloudflare.com/workers/configuration/routing/routes/)
 
-## 使用方法
-
-部署后，可以通过以下方式使用：
-
-- **查询当前 IP**：直接访问 `https://your-worker-domain.workers.dev/`
-- **更新 DNS 记录**：访问 `https://your-worker-domain.workers.dev/update?name=your_dns_record_name&key=your_access_key`
-  - `name`：需要更新的 DNS 记录名称，使用完整域名（如 `subdomain.example.com`）
-  - `key`：访问密钥，用于验证更新请求
-
-### 使用 crontab 自动更新
-
-您可以在Linux主机（希望将其所在网络的公网出口IP作为dns解析ip）上使用 crontab 设置定时任务，自动更新您的 DNS 记录：
-
-1. **编辑 crontab**：
-   ```bash
-   crontab -e
-   ```
-
-2. **添加定时任务**：
-
-   **每分钟更新一次**：
-   ```
-   * * * * * /usr/bin/curl -4 -s "https://your-worker-domain.workers.dev/update?name=your.example.com&key=your_access_key" > /dev/null 2>&1
-   ```
-
-   **每小时更新一次**（推荐）：
-   ```
-   0 * * * * /usr/bin/curl -4 -s "https://your-worker-domain.workers.dev/update?name=your.example.com&key=your_access_key" > /dev/null 2>&1
-   ```
-
-   > **注意**：
-   > - 使用完整路径 `/usr/bin/curl` 避免环境变量问题（可通过 `which curl` 命令查找您系统上的curl路径）
-   > - 使用 `-4` 参数强制使用 IPv4 连接
-   > - `-s` 参数使 curl 静默运行，不输出进度或错误信息
-   > - `> /dev/null 2>&1` 将所有输出重定向到空设备，防止 cron 发送邮件
-
-3. **保存并退出编辑器**
-
-4. **查看当前 crontab 设置**：
-   ```bash
-   crontab -l
-   ```
-
-## 配置说明
-
-Worker 使用环境变量进行配置，支持多域名。每个域名需要配置以下三个环境变量：
-
-```
-{your_dns_record_name}__zone_id - 域名所在的 Cloudflare 区域 ID（应设置为加密变量，否则部署时会覆盖）
-{your_dns_record_name}__api_token - 用于 Cloudflare API 认证的令牌（应设置为加密变量）
-{your_dns_record_name}__access_key - 用于客户端访问验证的密钥（应设置为加密变量）
-```
-
-例如，要为 `home.example.com` 配置 DDNS 更新：
-
-```
-home.example.com__zone_id
-home.example.com__api_token
-home.example.com__access_key
-```
-
-### 配置环境变量的方法
-
-**在 Cloudflare Dashboard 中配置**：
-- 进入 Workers & Pages > your-worker-name > Settings > Variables
-- 添加相应的变量或加密变量
-- **重要**：所有变量都应设置为加密变量（Secret），以确保在自动部署过程中不会丢失
-
-## 部署方法
-
-### 通过 GitHub 集成自动部署
-
-1. 在 Cloudflare Dashboard 中创建一个新的 Worker 项目
-2. 进入 Workers & Pages > 创建应用程序 > 连接到 Git
-3. 连接到您的 GitHub 账户并选择包含 DDNS Worker 代码的仓库
-4. 配置构建设置：
-   - **Build command**: 留空（None）
-   - **Deploy command**: `npx wrangler deploy`
-   - **Root directory**: `/`
-5. 设置生产分支（默认为 `main`）
-6. 配置必要的环境变量（见上文的配置说明）
-7. 点击"保存并部署"
-
-完成上述步骤后，每当您推送代码到指定的分支，Cloudflare 将自动构建和部署您的 Worker。
-
-## 手动部署方法
-
-如需手动部署：
-
-1. 确保已安装 Node.js 和 npm
-2. 安装依赖：
-   ```bash
-   npm install
-   ```
-3. 使用 Wrangler 登录 Cloudflare 账号：
-   ```bash
-   npx wrangler login
-   ```
-4. 配置环境变量（见上文）
-5. 部署项目：
-   ```bash
-   npm run deploy
-   ```
-   或
-   ```bash
-   npx wrangler deploy
-   ```
-
-## 本地开发
-
-启动本地开发服务器：
-```bash
-npm run dev
-```
 
 ## 技术实现
 
