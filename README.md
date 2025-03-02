@@ -93,6 +93,40 @@ Cloudflare Workers 是一个无服务器计算平台，允许您在 Cloudflare �
   - `name`：需要更新的 DNS 记录名称，使用完整域名（如 `subdomain.example.com`）
   - `key`：访问密钥，用于验证更新请求
 
+### 使用 crontab 自动更新
+
+您可以在Linux主机（希望将其所在网络的公网出口IP作为dns解析ip）上使用 crontab 设置定时任务，自动更新您的 DNS 记录：
+
+1. **编辑 crontab**：
+   ```bash
+   crontab -e
+   ```
+
+2. **添加定时任务**：
+
+   **每分钟更新一次**：
+   ```
+   * * * * * /usr/bin/curl -4 -s "https://your-worker-domain.workers.dev/update?name=your.example.com&key=your_access_key" > /dev/null 2>&1
+   ```
+
+   **每小时更新一次**（推荐）：
+   ```
+   0 * * * * /usr/bin/curl -4 -s "https://your-worker-domain.workers.dev/update?name=your.example.com&key=your_access_key" > /dev/null 2>&1
+   ```
+
+   > **注意**：
+   > - 使用完整路径 `/usr/bin/curl` 避免环境变量问题（可通过 `which curl` 命令查找您系统上的curl路径）
+   > - 使用 `-4` 参数强制使用 IPv4 连接
+   > - `-s` 参数使 curl 静默运行，不输出进度或错误信息
+   > - `> /dev/null 2>&1` 将所有输出重定向到空设备，防止 cron 发送邮件
+
+3. **保存并退出编辑器**
+
+4. **查看当前 crontab 设置**：
+   ```bash
+   crontab -l
+   ```
+
 ## 配置说明
 
 Worker 使用环境变量进行配置，支持多域名。每个域名需要配置以下三个环境变量：
