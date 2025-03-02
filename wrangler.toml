@@ -2,10 +2,34 @@ name = "ddns"
 main = "src/index.js"
 compatibility_date = "2023-01-01"
 
+# 基本配置
 [vars]
-# 您可以在这里添加环境变量
+# 注意：所有配置都应通过Cloudflare Dashboard或Wrangler CLI设置为环境变量/密钥
+# 不要在此文件中设置实际值，特别是敏感信息
 
-# 可选：如果需要自定义域名，可以取消注释下面的部分
+# 多域名配置示例（每个域名使用以下格式的环境变量）：
+# {your_dns_record_name}__zone_id - 域名所在的Cloudflare区域ID
+# {your_dns_record_name}__api_token - 用于API认证的令牌（应设置为加密变量）
+# {your_dns_record_name}__access_key - 用于客户端访问验证的密钥（应设置为加密变量）
+
+# Workers路由配置
 # [routes]
-# pattern = "example.com/*"
-# zone_name = "example.com" 
+# pattern = "ddns.example.com/*" # 替换为您的实际域名
+# zone_name = "example.com" # 替换为您的实际域名
+
+# ----------------------------
+# 如何配置环境变量和密钥：
+# 1. 使用Wrangler CLI:
+#    $ wrangler secret put your_dns_record_name__zone_id
+#    $ wrangler secret put your_dns_record_name__api_token
+#    $ wrangler secret put your_dns_record_name__access_key
+#    $ wrangler secret put another__zone_id
+#    $ wrangler secret put another__api_token
+#    $ wrangler secret put another__access_key
+#
+# 2. 或在Cloudflare Dashboard中:
+#    Workers & Pages > ddns > Settings > Variables > 添加变量/加密变量
+#
+# 使用方式:
+# - 查询IP: https://ddns.example.com/
+# - 更新DNS: https://ddns.example.com/update?name=your_dns_record_name&key=your_access_key 
