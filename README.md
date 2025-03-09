@@ -5,7 +5,8 @@
 ## 功能
 
 - 直接返回访问者的IP地址
-- 支持IPv4地址验证和更新(对A类的域名)
+- 支持IPv4地址验证和更新(对A类型的域名)
+- 支持IPv6地址验证和更新(对AAAA类型的域名)
 - 支持多域名配置
 - 通过API自动更新Cloudflare DNS记录
 - 使用访问密钥保护更新操作
@@ -17,10 +18,11 @@ flowchart TD
     A["客户端请求"] --> B["获取访问者IP地址"]
     B --> C["直接返回IP<br/>访问: your-worker.workers.dev"]
     B --> D["更新DNS记录<br/>访问: your-worker.workers.dev/update?name=sub.example.com&key=your_key"]
-    D --> F["获取请求参数<br/>域名name和访问密钥key"]
+    D --> E["判断IP类型<br/>IPv4或IPv6"]
+    E --> F["获取请求参数<br/>域名name和访问密钥key"]
     F --> G["以域名为前缀苑workder环境变量"]
     G --> H["验证访问密钥是否匹配"]
-    H --> I["查询当前DNS记录信息"]
+    H --> I["查询当前DNS记录信息<br/>A记录(IPv4)或AAAA记录(IPv6)"]
     I --> J["比较当前记录IP与访问者IP"]
     J --> K["IP地址相同<br/>无需更新"]
     J --> L["IP地址不同<br/>需要更新"]
@@ -70,6 +72,9 @@ my.example.com__access_key
 - **更新 DNS 记录**：访问 `https://your-worker-domain.workers.dev/update?name=your_dns_record_name&key=your_access_key`
   - `name`：需要更新的 DNS 记录名称，使用完整域名（如 `my.example.com`）
   - `key`：访问密钥，用于验证更新请求，要等于worker中的my.example.com__access_key值
+
+**注意**：系统会自动检测您的 IP 类型（IPv4 或 IPv6），并更新相应类型的 DNS 记录（A 记录或 AAAA 记录）。请确保您的域名已经配置了相应类型的 DNS 记录。
+
 ### 使用 crontab 自动更新
 您可以在Linux主机（**希望将其所在网络的公网出口IP作为dns解析ip**）上使用 crontab 设置定时任务，自动更新您的 DNS 记录：
 
@@ -140,8 +145,9 @@ Cloudflare Workers 是一个无服务器计算平台，允许您在 Cloudflare �
 
 - 使用 Cloudflare Workers 平台
 - 通过 `CF-Connecting-IP` 头获取访问者 IP
+- 支持 IPv4 和 IPv6 地址验证
 - 使用 Cloudflare API 进行 DNS 记录更新
-- 支持 IPv4 地址验证
+- 自动识别 IP 类型并更新相应的 DNS 记录类型（A 或 AAAA）
 
 ## 许可证
 
