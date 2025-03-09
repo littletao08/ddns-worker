@@ -10,6 +10,7 @@
 - 支持多域名配置
 - 通过API自动更新Cloudflare DNS记录
 - 使用访问密钥保护更新操作
+- 保持原有DNS记录的代理状态(proxied)和TTL设置
 
 ## 工作流程
 
@@ -23,12 +24,13 @@ flowchart TD
     F --> G["以域名为前缀苑workder环境变量"]
     G --> H["验证访问密钥是否匹配"]
     H --> I["查询当前DNS记录信息<br/>A记录(IPv4)或AAAA记录(IPv6)"]
-    I --> J["比较当前记录IP与访问者IP"]
-    J --> K["IP地址相同<br/>无需更新"]
-    J --> L["IP地址不同<br/>需要更新"]
-    L --> M["调用Cloudflare API<br/>更新DNS记录"]
-    K --> N["返回无变更结果"]
-    M --> O["返回更新成功结果"]
+    I --> J["获取当前记录的代理状态(proxied)和TTL"]
+    J --> K["比较当前记录IP与访问者IP"]
+    K --> L["IP地址相同<br/>无需更新"]
+    K --> M["IP地址不同<br/>需要更新"]
+    M --> N["调用Cloudflare API<br/>更新DNS记录<br/>保持原有代理状态和TTL"]
+    L --> O["返回无变更结果"]
+    N --> P["返回更新成功结果"]
 ```
 
 ## 部署方法
@@ -148,6 +150,7 @@ Cloudflare Workers 是一个无服务器计算平台，允许您在 Cloudflare �
 - 支持 IPv4 和 IPv6 地址验证
 - 使用 Cloudflare API 进行 DNS 记录更新
 - 自动识别 IP 类型并更新相应的 DNS 记录类型（A 或 AAAA）
+- 保持原有 DNS 记录的代理状态(proxied)和 TTL 设置
 
 ## 许可证
 

@@ -84,11 +84,13 @@ async function getDnsRecordCurrentIp(zoneId, recordName, apiToken, recordType) {
     }
     
     if (data.result && data.result.length > 0) {
-      // 返回记录ID和当前IP
+      // 返回记录ID、当前IP、记录类型和proxied状态
       return {
         recordId: data.result[0].id,
         currentIp: data.result[0].content,
-        recordType: data.result[0].type
+        recordType: data.result[0].type,
+        proxied: data.result[0].proxied,
+        ttl: data.result[0].ttl
       };
     } else {
       throw new Error(`未找到${recordType}类型的DNS记录`);
@@ -99,7 +101,7 @@ async function getDnsRecordCurrentIp(zoneId, recordName, apiToken, recordType) {
 }
 
 // 更新DNS记录
-async function updateDnsRecord(recordId, newIp, zoneId, recordName, apiToken, recordType) {
+async function updateDnsRecord(recordId, newIp, zoneId, recordName, apiToken, recordType, proxied, ttl) {
   if (!apiToken) {
     throw new Error(`缺少API令牌，请确保${recordName}__api_token环境变量已设置`);
   }
@@ -130,7 +132,8 @@ async function updateDnsRecord(recordId, newIp, zoneId, recordName, apiToken, re
           type: recordType,
           name: recordName,
           content: newIp,
-          ttl: 300
+          ttl: ttl || 300,
+          proxied: proxied !== undefined ? proxied : false
         })
       }
     );
@@ -208,7 +211,7 @@ export default {
         }
         
         // 获取当前DNS记录信息
-        const { recordId, currentIp, recordType } = await getDnsRecordCurrentIp(zoneId, recordName, apiToken, ipInfo.type);
+        const { recordId, currentIp, recordType, proxied, ttl } = await getDnsRecordCurrentIp(zoneId, recordName, apiToken, ipInfo.type);
         
         // 确保客户端IP类型与DNS记录类型匹配
         if (recordType !== ipInfo.type) {
@@ -231,7 +234,8 @@ export default {
             updated: false,
             message: "DNS记录已是最新，无需更新",
             current_ip: currentIp,
-            record_type: recordType
+            record_type: recordType,
+            proxied: proxied
           }), {
             headers: {
               'Content-Type': 'application/json',
@@ -240,8 +244,8 @@ export default {
           });
         }
         
-        // 更新DNS记录
-        const updateResult = await updateDnsRecord(recordId, clientIP, zoneId, recordName, apiToken, recordType);
+        // 更新DNS记录，保持原有的proxied设置
+        const updateResult = await updateDnsRecord(recordId, clientIP, zoneId, recordName, apiToken, recordType, proxied, ttl);
         
         return new Response(JSON.stringify({
           success: true,
@@ -249,7 +253,8 @@ export default {
           message: "DNS记录已更新",
           old_ip: currentIp,
           new_ip: clientIP,
-          record_type: recordType
+          record_type: recordType,
+          proxied: proxied
         }), {
           headers: {
             'Content-Type': 'application/json',
