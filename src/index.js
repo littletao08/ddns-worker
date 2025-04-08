@@ -200,7 +200,7 @@ export default {
         if (accessKey && key !== accessKey) {
           return new Response(JSON.stringify({
             success: false,
-            message: "无效的访问密钥"
+            message: "无效的访问密钥"+accessKey
           }), {
             status: 403,
             headers: {
